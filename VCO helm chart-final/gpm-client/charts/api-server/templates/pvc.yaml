@@ -1,0 +1,37 @@
+{{- if and .Values.persistence.gapdata.enabled }}
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: gapdata
+  annotations:
+  {{- if .Values.persistence.gapdata.storageClass }}
+    volume.beta.kubernetes.io/storage-class: {{ .Values.persistence.gapdata.storageClass | quote }}
+  {{- else }}
+    volume.alpha.kubernetes.io/storage-class: default
+  {{- end }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.gapdata.accessMode | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.gapdata.size | quote }}
+{{- end }}
+---
+{{- if and .Values.persistence.logs.enabled }}
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: logs
+  annotations:
+  {{- if .Values.persistence.logs.storageClass }}
+    volume.beta.kubernetes.io/storage-class: {{ .Values.persistence.logs.storageClass | quote }}
+  {{- else }}
+    volume.alpha.kubernetes.io/storage-class: default
+  {{- end }}
+spec:
+  accessModes:
+    - {{ .Values.persistence.logs.accessMode | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.logs.size | quote }}
+{{- end }}

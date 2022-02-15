@@ -1,0 +1,120 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "api-server.fullname" . }}
+  labels:
+    {{- include "api-server.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "api-server.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "api-server.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "api-server.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+        #  command: ['sh', '-c', 'chmod 777 /start-all-dev.sh'] 
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3012
+              protocol: TCP
+      #    livenessProbe:
+       #     httpGet:
+        #      path: /
+         #     port: http
+        #  readinessProbe:
+         #   httpGet:
+          #    path: /
+           #   port: http
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+          - mountPath:  "/.env.development" 
+            name: env-development
+            subPath: ".env.development"
+          - mountPath:  "/.env.production" 
+            name: env-production
+            subPath: ".env.production"
+          - mountPath:  "/package.json" 
+            name: package-json
+            subPath: "package.json"
+          - mountPath:  "/start-all-dev.sh" 
+            name: start-all-dev-sh
+            subPath: "start-all-dev.sh"
+          - name: gapdata
+            mountPath: "/root/prj/optus/gap-data"
+          - name: logs
+            mountPath: "/root/.pm2/logs"
+          - mountPath:  "/start-all-prod.sh"
+            name: start-all-prod-sh
+            subPath: "start-all-prod.sh"
+      volumes:
+        - name: start-all-prod-sh
+          configMap:
+            name: start-prod-config
+            defaultMode: 0777
+        - name: env-development
+          configMap:
+            name: env-dev-config
+        - name: env-production
+          configMap:
+            name: env-prod-config
+        - name: package-json
+          configMap:
+            name: package-json-config
+        - name: start-all-dev-sh
+          configMap:
+            name: start-all-config
+            defaultMode: 0777
+        - name: logs
+          {{- if .Values.persistence.logs.enabled }}
+          persistentVolumeClaim:
+            claimName: logs
+          {{- else }}
+          emptyDir: {}
+          {{- end -}}
+        {{- if .Values.extraVolumes }}
+        {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
+        {{- end }}
+        - name: gapdata
+          {{- if .Values.persistence.gapdata.enabled }}
+          persistentVolumeClaim:
+            claimName: gapdata
+          {{- else }}
+          emptyDir: {}
+          {{- end -}}
+        {{- if .Values.extraVolumes }}
+        {{- include "common.tplvalues.render" (dict "value" .Values.extraVolumes "context" $) | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
